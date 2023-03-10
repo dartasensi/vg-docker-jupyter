@@ -1,34 +1,72 @@
 #!/bin/bash
 
-function install_docker() {
-  # Docker official provision script
-  # Instructions found on https://docs.docker.com/engine/install/ubuntu/
+# example: install_custom_apt_repo <GPG_URL> <GPG_FILENAME.asc/.gpg> <REPO_DEB_PARAMs x4> <APT_SOURCES_FILENAME.list>
+function install_custom_apt_repo () {
+  # customizable function to install a new repository including GPG keyring
+  GPG_KEYRING_ROOT_PATH='/usr/share/keyrings/'
+  APT_REPO_ROOT_PATH='/etc/apt/sources.list.d/'
 
-  DOCKER_GPG_URL='https://download.docker.com/linux/ubuntu/gpg'
-  DOCKER_GPG_KEY_PATH='/usr/share/keyrings/docker-archive-keyring.gpg'
-  DOCKER_REPO_URL='https://download.docker.com/linux/ubuntu'
-  DOCKER_APT_REPO_PATH='/etc/apt/sources.list.d/docker.list'
+  USER_GPG_URL=$1
+  USER_GPG_KEY_FILENAME=$2
+  USER_REPO_DEB_TYPE=$3
+  USER_REPO_DEB_URL=$4
+  USER_REPO_DEB_DISTRO=$5
+  USER_REPO_DEB_CHANNEL=$6
+  USER_APT_REPO_FILENAME=$7
+
+  if [[ -n "${USER_GPG_KEY_FILENAME}" ]] ; then
+    TARGET_GPG_KEYRING_PATH=${GPG_KEYRING_ROOT_PATH}${USER_GPG_KEY_FILENAME}
+  fi
+  if [[ -n "${USER_APT_REPO_FILENAME}" ]] ; then
+    TARGET_APT_REPO_PATH=${APT_REPO_ROOT_PATH}${USER_APT_REPO_FILENAME}
+  fi
 
   echo
-  echo ">>> updating and installing packages required by Docker..."
+  echo ">>> updating and installing required packages..."
   sudo apt-get -qq -y update && sudo apt-get -qq -y install \
         apt-transport-https \
         ca-certificates \
         curl \
+        git \
         gnupg \
         lsb-release
 
-  if [[ ! -f "${DOCKER_GPG_KEY_PATH}" ]] ; then
+  if [[ ! -f "${TARGET_GPG_KEYRING_PATH}" ]] ; then
     echo
-    echo ">>> downloading and adding Docker's official GPG key on ${DOCKER_GPG_KEY_PATH}..."
-    curl -fsSL ${DOCKER_GPG_URL} | sudo gpg --dearmor -o ${DOCKER_GPG_KEY_PATH}
+    echo ">>> downloading and adding official GPG key as: ${TARGET_GPG_KEYRING_PATH}..."
+    curl -fsSL ${USER_GPG_URL} | sudo gpg --dearmor -o ${TARGET_GPG_KEYRING_PATH}
   fi
 
-  if [[ ! -f "${DOCKER_APT_REPO_PATH}" ]] ; then
+  if [[ ! -f "${TARGET_APT_REPO_PATH}" ]] ; then
+    DEB_LINE="${USER_REPO_DEB_TYPE} [arch=amd64 signed-by=${TARGET_GPG_KEYRING_PATH}] ${USER_REPO_DEB_URL} ${USER_REPO_DEB_DISTRO} ${USER_REPO_DEB_CHANNEL}"
+
     echo
-    echo ">>> adding the official Docker repository to the system..."
-    echo "deb [arch=amd64 signed-by=${DOCKER_GPG_KEY_PATH}] ${DOCKER_REPO_URL} $(lsb_release -cs) stable" | sudo tee ${DOCKER_APT_REPO_PATH} > /dev/null
+    echo ">>> registering repository into the system..."
+    echo $DEB_LINE | sudo tee ${TARGET_APT_REPO_PATH} > /dev/null
   fi
+}
+
+function install_docker() {
+  # Docker provision script
+  # Instructions found on https://docs.docker.com/engine/install/ubuntu/
+
+  # Docker repo configuration
+  GPG_URL='https://download.docker.com/linux/ubuntu/gpg'
+  GPG_KEYRING_FILENAME='docker-archive-keyring.gpg'
+  APT_REPO_DEB_TYPE='deb'
+  APT_REPO_DEB_URL="https://download.docker.com/linux/ubuntu"
+  APT_REPO_DEB_DISTRO=$(lsb_release -cs)
+  APT_REPO_DEB_CHANNEL='stable'
+  APT_REPO_FILENAME='docker.list'
+
+  install_custom_apt_repo \
+   $GPG_URL \
+   $GPG_KEYRING_FILENAME \
+   $APT_REPO_DEB_TYPE \
+   $APT_REPO_DEB_URL \
+   $APT_REPO_DEB_DISTRO \
+   $APT_REPO_DEB_CHANNEL \
+   $APT_REPO_FILENAME
 
   echo
   echo ">>> installing Docker..."

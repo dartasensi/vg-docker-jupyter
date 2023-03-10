@@ -44,6 +44,13 @@ sudo apt-get -qq -y update && sudo apt-get -qq -y install \
         net-tools \
         tree \
         screen \
+        software-properties-common \
+        apt-transport-https \
+        ca-certificates \
+        curl \
+        git \
+        gnupg \
+        lsb-release \
         bash-completion
 
 ## Install and configure bash-completion

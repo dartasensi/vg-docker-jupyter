@@ -56,9 +56,9 @@ Vagrant.configure("2") do |config|
       # try to use VirtualBox linked clone
       vb.linked_clone = true
 
-      # ubuntu: with this distro, it can not set the host as dns resolver, it breaks the dns resolver of docker containers
+      # ubuntu: with this distro, the host can not set as dns resolver. It usually breaks the resolver of docker containers
       #vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
-      #vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
+      vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
 
       # enable the clipboard/draganddrop as bidirectional
       vb.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
@@ -68,9 +68,15 @@ Vagrant.configure("2") do |config|
       #vb.gui = false
 
       # to apply when VBox > v6.1.14: set the display settings for VRAM, VMSVGA and 3D acceleration
-      vb.customize ["modifyvm", :id, "--vram", "16"]
+      vb.customize ["modifyvm", :id, "--vram", "128"]
       vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
       vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
+
+      # prevent from interfering with host audio stack
+      vb.customize ["modifyvm", :id, "--audio", "none"]
+      # ensure to have usb disabled
+      vb.customize ["modifyvm", :id, "--usb", "off"]
+      vb.customize ["modifyvm", :id, "--usbehci", "off"]
     end
 
     # inline basic provision: update
@@ -82,6 +88,12 @@ Vagrant.configure("2") do |config|
     # ref. https://docs.docker.com/engine/install/ubuntu/
     main.vm.provision :shell, path: ".vg-provision/bootstrap_ubuntu_docker.sh"
 
+    # custom script for minimal gui+development
+    main.vm.provision :shell, path: ".vg-provision/bootstrap_ubuntu_gui_dev.sh"
+    # custom script for deployment of adoptium jdk
+    main.vm.provision :shell, path: ".vg-provision/bootstrap_ubuntu_adoptium_jdk.sh"
+    # custom script for deployment of nodejs
+    main.vm.provision :shell, path: ".vg-provision/bootstrap_ubuntu_nodejs.sh"
     # reload: use the plugin to reboot
     #main.vm.provision :reload
   end
